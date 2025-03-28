@@ -1,5 +1,7 @@
 # PhotoshopBlendModesAndUnity
 
+Blending (0,0.5,1) on top of (0.5,0.5,0.5).
+
 | Description | Gamma | Linear |
 | ------------------------- | ------ | ------ |
 | Photoshop Color Settings | ![](ReadmeImages/Photoshop_gamma.JPG) | ![](ReadmeImages/Photoshop_linear.JPG) |
