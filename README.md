@@ -2,7 +2,7 @@
 
 | Description | Gamma | Linear |
 | ------------------------- | ------ | ------ |
-| Photoshop Color Settings | ![](ReadmeImages/Photoshop_gamma.JPG) | ![](ReadmeImages/Photoshop_Linear.JPG) |
+| Photoshop Color Settings | ![](ReadmeImages/Photoshop_gamma.JPG) | ![](ReadmeImages/Photoshop_linear.JPG) |
 | Photoshop | ![](Assets/PhotoshopReference/PSBlendModes_Gamma.PNG) | ![](Assets/PhotoshopReference/PSBlendModes_Linear.PNG) |
 | Unity Player Settings | ![](ReadmeImages/Unity_gamma.JPG) | ![](ReadmeImages/Unity_linear.JPG) |
 | Unity Shader Blend colors manually | ![](ReadmeImages/PSBlendModes_Gamma.PNG) | ![](ReadmeImages/PSBlendModes_Linear.PNG) |
