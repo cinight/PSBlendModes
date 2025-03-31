@@ -29,9 +29,9 @@ See below to find out what settings in both that need to match:
 
 It depnds on your **Unity project**.
 
-The Unity project can be on **Gamma Color Space** if it’s a 2D game, or a 3D game with very simple shading. Using Gamma Color Space in this case can save some performance as Unity doesn’t need to do final gamma correction after rendering everything, since all colors are in gamma color space already.
+The Unity project can be on `Gamma Color Space` if it’s a 2D game, or a 3D game with very simple shading. Using Gamma Color Space in this case can save some performance as Unity doesn’t need to do final gamma correction after rendering everything, since all colors are in gamma color space already.
 
-The Unity project will need to be on **Linear Color Space** if it needs accurate lighting rendering. See [documentation](https://docs.unity3d.com/Manual/LinearRendering-LinearOrGammaWorkflow.html). Basically modern 3D game projects are recommended to be in Linear Color Space.
+The Unity project will need to be on `Linear Color Space` if it needs accurate lighting rendering. See [documentation](https://docs.unity3d.com/Manual/LinearRendering-LinearOrGammaWorkflow.html). Basically modern 3D game projects are recommended to be in Linear Color Space.
 
 Therefore, the ideal case is - either **from the beginning** of the production or **before artists merge the layers** and export the sprites, ask the artists to change the settings in Photopshop accordingly. But make sure they are aware this will affect how they paint:
 
@@ -44,7 +44,7 @@ When Photoshop `Blend RGB Colors Using Gamma [1.00]` checkbox is:
 
 ## But it’s too late… Any workaround?
 
-### 🙂 Good thing:
+### 🙂 Yes:
 
 If your UI objects only use **alpha blending** mode ([in Photoshop it is called “Normal”](https://helpx.adobe.com/photoshop/using/blending-modes.html)), you can apply Linear / Gamma blending in Unity by sacrificing some runtime performance.
 
@@ -52,14 +52,14 @@ The idea is to render the entire UI into a RenderTexture first, and then after 3
 
 
 The workaround code and set up can be found in the `CameraColorSpaceWorkaround` folder of this repository. The setup is basically:
-> [!TIP]
+> [!NOTE]
 > Universal Render Pipeline (URP) only. See branches for older Unity versions.
 
 ![](ReadmeImages/post_workaround_setup.jpg)
 
 <br>
 
-### ☹️ Bad thing:
+### ☹️ No:
 
 If the UI consists of many layers and each layer uses a **different** blending mode - there is no easy trick to workaround this. The best is still to ask artists to try their best modifying their images.
 
@@ -81,7 +81,7 @@ Since if we blend the colors manually we can achieve the same result as Photosho
 
 # PhotoshopBlendModesAndUnity
 
-In the `Test` folder, there are shaders that blends `(0,0.5,1)` on top of `(0.5,0.5,0.5)` colors.
+In the `Test` folder, there are shaders that blends color `(0,0.5,1)` on top of `(0.5,0.5,0.5)`.
 
 | Description | Gamma | Linear |
 | ------------------------- | ------ | ------ |
