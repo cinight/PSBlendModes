@@ -19,7 +19,7 @@ Shader "Test/PSBlendModes"
 			#pragma fragment frag
 
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-			#include "Colors.hlsl"
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 			
 			struct appdata
 			{
@@ -80,8 +80,8 @@ Shader "Test/PSBlendModes"
 					// Fix color space
 					#if UNITY_COLORSPACE_GAMMA
 					#else
-						colorBottomLin = Builtin_LinearToGammaSpace(colorBottomLin);
-						colorTopLin = Builtin_LinearToGammaSpace(colorTopLin);
+						colorBottomLin = LinearToSRGB(colorBottomLin);
+						colorTopLin = LinearToSRGB(colorTopLin);
 					#endif
 					
 					float3 colorLin = colorBottomLin + colorTopLin;
@@ -89,7 +89,7 @@ Shader "Test/PSBlendModes"
 					// Fix color space
 					#if UNITY_COLORSPACE_GAMMA
 					#else
-						colorLin = Builtin_GammaToLinearSpace(colorLin);
+						colorLin = SRGBToLinear(colorLin);
 					#endif
 
 					result.rgb = AlphaBlending(colorBottom, colorLin, alpha);
@@ -104,8 +104,8 @@ Shader "Test/PSBlendModes"
 					// Fix color space
 					#if UNITY_COLORSPACE_GAMMA
 					#else
-						colorBottomLin = Builtin_LinearToGammaSpace(colorBottomLin);
-						colorTopLin = Builtin_LinearToGammaSpace(colorTopLin);
+						colorBottomLin = LinearToSRGB(colorBottomLin);
+						colorTopLin = LinearToSRGB(colorTopLin);
 					#endif
 					
 					float3 colorLin = colorTopLin * (1-colorBottomLin) + colorBottomLin;
@@ -113,7 +113,7 @@ Shader "Test/PSBlendModes"
 					// Fix color space
 					#if UNITY_COLORSPACE_GAMMA
 					#else
-						colorLin = Builtin_GammaToLinearSpace(colorLin);
+						colorLin = SRGBToLinear(colorLin);
 					#endif
 					
 					result.rgb = AlphaBlending(colorBottom, colorLin, alpha);

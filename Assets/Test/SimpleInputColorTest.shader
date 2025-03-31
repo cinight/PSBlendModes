@@ -18,7 +18,7 @@ Shader "Test/SimpleInputColorTest"
             #pragma fragment frag
 
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-			#include "Colors.hlsl"
+			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 
 			struct appdata
 			{
@@ -54,7 +54,7 @@ Shader "Test/SimpleInputColorTest"
                 	to linear space manually */
 					#if UNITY_COLORSPACE_GAMMA
 					#else
-						_Vector.rgb = Builtin_GammaToLinearSpace(_Vector.rgb);
+						_Vector.rgb = SRGBToLinear(_Vector.rgb);
 					#endif
                 	
                     return _Vector;
