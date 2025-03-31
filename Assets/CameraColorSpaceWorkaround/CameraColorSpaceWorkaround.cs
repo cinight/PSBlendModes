@@ -53,6 +53,7 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         
         // Change UI camera settings
         cameraUI.depth = camera3D.depth - 1; //Make UI cam render first
+        cameraUI.clearFlags = CameraClearFlags.SolidColor;
         cameraUI.backgroundColor = new Color(0,0,0,0);
         m_CameraUIAddData.renderType = CameraRenderType.Base; //So that we can set target texture
         
