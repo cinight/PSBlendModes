@@ -1,7 +1,7 @@
 # CameraColorSpaceWorkaround
 
 > [!NOTE]
-> Unity 6.0+ and Universal Render Pipeline (URP) only. See branches for other versions.
+> Unity 2022.3 LTS and Universal Render Pipeline (URP) only. See branches for other versions.
 
 <br>
 
@@ -56,9 +56,12 @@ The idea is to render the entire UI into a RenderTexture first, and then after 3
 
 The workaround code and set up can be found in the `CameraColorSpaceWorkaround` folder of this repository. The setup is basically:
 
+ "re-use" the 3D camera's one by setting blendEvent to make the 3D+UI blending happens before 3D render post-processing (beforeRenderingPostProcessing).
+
+
 > [!TIP]
-> In U6, if you want to have post-processing for UI Camera, make sure to go to Render Pipeline Asset > Post-processing > enable Alpha Processing checkbox.
-> The UI camera can of course also "re-use" the 3D camera's post-processing by setting blendEvent on the workaround component to make the 3D+UI blending happens before 3D camera renders post-processing (beforeRenderingPostProcessing).
+> In 2022.3, the UI Camera can't have its own post-processing, because it is missing post-processing preserve alpha feature which is only added in U6.
+> But the UI Camera can "re-use" the 3D camera's post-processing by setting blendEvent on the workaround component to make the 3D+UI blending happens before 3D camera renders post-processing (beforeRenderingPostProcessing).
 
 ![](ReadmeImages/post_workaround_setup.jpg)
 
