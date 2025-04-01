@@ -13,6 +13,7 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
     public Material material;
     public Camera cameraUI;
     public Camera camera3D;
+    public RenderPassEvent blendEvent = RenderPassEvent.AfterRenderingPostProcessing;
     
     private RenderTexture m_CameraUIRT;
     private const string k_CameraUIRTName = "_CameraUIRT";
@@ -107,6 +108,7 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         if (cam.Equals(camera3D))
         {
             // Enqueue pass for the 3D camera
+            m_Pass.renderPassEvent = blendEvent;
             cam.GetUniversalAdditionalCameraData().scriptableRenderer.EnqueuePass(m_Pass);
         }
     }
@@ -153,7 +155,6 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
 
     public CameraColorSpaceWorkaroundPass(Material mat)
     {
-        renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
         m_Material = mat;
     }
 
