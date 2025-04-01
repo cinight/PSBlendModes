@@ -19,11 +19,6 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
     private UniversalAdditionalCameraData m_CameraUIAddData;
     private CameraColorSpaceWorkaroundPass m_Pass;
     private const string k_EnabledName = "_CameraColorSpaceWorkaroundEnabled";
-
-    private void Start()
-    {
-        Setup();
-    }
     
     private void OnValidate()
     {
@@ -39,11 +34,6 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         Cleanup();
     }
 
-    private void OnDestroy()
-    {
-        Cleanup();
-    }
-
     private void Setup()
     {
         // Clean up first
@@ -52,6 +42,7 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         if (cameraUI == null || camera3D == null || material == null) return;
         
         // Change UI camera settings
+        if(m_CameraUIAddData == null) m_CameraUIAddData = cameraUI.GetUniversalAdditionalCameraData();
         cameraUI.depth = camera3D.depth - 1; //Make UI cam render first
         cameraUI.clearFlags = CameraClearFlags.SolidColor;
         cameraUI.backgroundColor = new Color(0,0,0,0);
@@ -61,17 +52,17 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         if (m_CameraUIRT == null || !m_CameraUIRT.IsCreated())
         {
             // Create a RenderTexture and use it as camera target
-
             UniversalRenderPipeline.InitializeCameraDataWrapper(
                 cameraUI, m_CameraUIAddData, true, 
                 out var cameraDataTop);
             var descTop = cameraDataTop.cameraTargetDescriptor;
             descTop.graphicsFormat = UniversalRenderPipeline.MakeRenderTextureGraphicsFormat(
-                cameraDataTop.isHdrEnabled, cameraDataTop.hdrColorBufferPrecision, true);
+                cameraDataTop.isHdrEnabled, cameraDataTop.hdrColorBufferPrecision, true); //make sure format has Alpha channel
             m_CameraUIRT = new RenderTexture(descTop);
             m_CameraUIRT.name = k_CameraUIRTName;
             
             // Use the RenderTexture as camera target
+            // can't do cameraDataTop.targetTexture because the rendered content does not preserve alpha
             cameraUI.targetTexture = m_CameraUIRT;
         }
         
