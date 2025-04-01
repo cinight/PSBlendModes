@@ -157,34 +157,41 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
     {
         m_Material = mat;
     }
-
-    public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
-    {
-        var universalRenderer = (UniversalRenderer)renderingData.cameraData.renderer;
-        m_CameraHandle = universalRenderer.m_ColorBufferSystem.GetBufferA(); //BufferA
-        m_TargetHandle = universalRenderer.m_ColorBufferSystem.GetFrontBuffer(cmd); //BufferB
-        ConfigureTarget(m_TargetHandle);
-    }
-
+    
     public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
     {
-       var universalRenderer = (UniversalRenderer)renderingData.cameraData.renderer;
-
         CommandBuffer cmd = CommandBufferPool.Get();
         
-        // Blit from A into B as we can't Blit from A to A
+        // Find out the source and destination for the blit operation
+        var universalRenderer = (UniversalRenderer)renderingData.cameraData.renderer;
+        var currentTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
+        var bufferA = universalRenderer.m_ColorBufferSystem.GetBufferA(); //BufferA
+        var bufferB = universalRenderer.m_ColorBufferSystem.GetFrontBuffer(cmd); //BufferB
+        if (currentTarget == bufferA)
+        {
+            m_CameraHandle = bufferA;
+            m_TargetHandle = bufferB;
+        }
+        else
+        {
+            // When post-processing is enabled on 3D camera, post-processing is rendered into buffer B
+            m_CameraHandle = currentTarget; // Can't be B as target is neither B nor A for some reason
+            m_TargetHandle = bufferA;
+        }
+        
+        // Blit from "A" into "B" as we can't Blit from-to the same texture
         using (new ProfilingScope(cmd, m_ProfilingSampler))
         {
             Blitter.BlitCameraTexture(cmd, m_CameraHandle, m_TargetHandle, m_Material, 0);
         }
         
-        // Use BufferB as the camera target so that we don't need another blit from B to A
+        // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
         universalRenderer.SwapColorBuffer(cmd);
         
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         CommandBufferPool.Release(cmd);
-	}
+    }
 }
 
 // Wrapper so that we can use the private static function
