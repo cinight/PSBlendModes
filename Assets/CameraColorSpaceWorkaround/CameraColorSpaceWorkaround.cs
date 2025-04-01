@@ -1,3 +1,6 @@
+// In 2022.3, on UI Camera can enable HDR format. But if post-processing is enabled on the UI Camera, the rendered UI content will not have alpha. (because of missing post-processing preserve alpha feature which is only added in U6)
+// Therefore the UI Camera can't have its own post-processing. It can "re-use" the 3D camera's one by setting blendEvent to make the 3D+UI blending happens before 3D render post-processing (beforeRenderingPostProcessing).
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
