@@ -1,12 +1,15 @@
-// In 2022.3, on UI Camera can enable HDR format. But if post-processing is enabled on the UI Camera, the rendered UI content will not have alpha. (because of missing post-processing preserve alpha feature which is only added in U6)
-// Therefore the UI Camera can't have its own post-processing. It can "re-use" the 3D camera's one by setting blendEvent to make the 3D+UI blending happens before 3D render post-processing (beforeRenderingPostProcessing).
+// In U6, post-processing preserve alpha feature is available. If you want to have post-processing for UI Camera, make sure you go to Render Pipeline Asset > Post-processing > enable Alpha Processing checkbox
+// The UI can of course also "re-use" the 3D camera's post-processing by setting blendEvent to make the 3D+UI blending happens before 3D render post-processing (beforeRenderingPostProcessing).
 
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.RenderGraphModule;
+using UnityEngine.Rendering.RenderGraphModule.Util;
 using UnityEngine.Rendering.Universal;
+using RenderGraphUtils = UnityEngine.Rendering.RenderGraphModule.Util.RenderGraphUtils;
 
 [ExecuteAlways]
 public class CameraColorSpaceWorkaround : MonoBehaviour
@@ -56,14 +59,18 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         if (m_CameraUIRT == null || !m_CameraUIRT.IsCreated())
         {
             // Create a RenderTexture and use it as camera target
-            UniversalRenderPipeline.InitializeCameraDataWrapper(
-                cameraUI, m_CameraUIAddData, true, 
-                out var cameraDataTop);
+            var frameData = m_CameraUIAddData.scriptableRenderer.frameData;
+            UniversalCameraData cameraDataTop = UniversalRenderPipeline.CreateCameraDataWrapper(
+                frameData, cameraUI, m_CameraUIAddData, true);
             var descTop = cameraDataTop.cameraTargetDescriptor;
             descTop.graphicsFormat = UniversalRenderPipeline.MakeRenderTextureGraphicsFormat(
                 cameraDataTop.isHdrEnabled, cameraDataTop.hdrColorBufferPrecision, true); //make sure format has Alpha channel
             m_CameraUIRT = new RenderTexture(descTop);
             m_CameraUIRT.name = k_CameraUIRTName;
+            
+            // Remove the UniversalCameraData created above as pipeline will create one without checking if it exists,
+            // so if we don't kill this new one, there will be console spamming error.
+            frameData.Dispose();
             
             // Use the RenderTexture as camera target
             // can't do cameraDataTop.targetTexture because the rendered content does not preserve alpha
@@ -151,7 +158,8 @@ class CameraColorSpaceWorkaroundEditor : Editor
 // A blit pass that blends the 2 camera contents
 public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
 {
-    private ProfilingSampler m_ProfilingSampler = new ("CameraColorSpaceWorkaroundPass");
+    private const string k_CameraColorSpaceWorkaroundName = "CameraColorSpaceWorkaroundPass";
+    private ProfilingSampler m_ProfilingSampler = new (k_CameraColorSpaceWorkaroundName);
     private RTHandle m_CameraHandle; //BufferA
     private RTHandle m_TargetHandle; //BufferB
     private Material m_Material;
@@ -161,6 +169,29 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
         m_Material = mat;
     }
     
+    // RenderGraph path
+    public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+    {
+        UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
+        UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+        var universalRenderer = (UniversalRenderer)cameraData.renderer;
+        
+        // Find out the source and destination for the blit operation
+        // In RG these functions will give you A or B according which is the active one automatically
+        m_CameraHandle = UniversalRenderer.GetRGHandle_Current(universalRenderer);
+        m_TargetHandle = UniversalRenderer.GetRGHandle_Next(universalRenderer);
+        TextureHandle currentTextureHandle = renderGraph.ImportTexture(m_CameraHandle);
+        TextureHandle nextTextureHandle = renderGraph.ImportTexture(m_TargetHandle);
+        
+        // Blit from "A" into "B" as we can't Blit from-to the same texture
+        RenderGraphUtils.BlitMaterialParameters para = new(currentTextureHandle, nextTextureHandle, m_Material, 0);
+        renderGraph.AddBlitPass(para, k_CameraColorSpaceWorkaroundName);
+        
+        // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
+        resourceData.cameraColor = nextTextureHandle;
+    }
+    
+    // Non-RenderGraph path
     public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
     {
         CommandBuffer cmd = CommandBufferPool.Get();
@@ -202,10 +233,22 @@ namespace UnityEngine.Rendering.Universal
 {
     public sealed partial class UniversalRenderPipeline
     {
-        public static void InitializeCameraDataWrapper(Camera camera,
-            UniversalAdditionalCameraData additionalCameraData, bool resolveFinalTarget, out CameraData cameraData)
+        public static UniversalCameraData CreateCameraDataWrapper (ContextContainer frameData, Camera camera, UniversalAdditionalCameraData additionalCameraData, bool resolveFinalTarget)
         {
-            InitializeCameraData(camera, additionalCameraData, resolveFinalTarget, out cameraData);
+            return CreateCameraData(frameData, camera, additionalCameraData, resolveFinalTarget);
+        }
+    }
+    
+    public sealed partial class UniversalRenderer
+    {
+        public static RTHandle GetRGHandle_Current(UniversalRenderer renderer)
+        {
+            return renderer.currentRenderGraphCameraColorHandle;
+        }
+        
+        public static RTHandle GetRGHandle_Next(UniversalRenderer renderer)
+        {
+            return renderer.nextRenderGraphCameraColorHandle;
         }
     }
 }
