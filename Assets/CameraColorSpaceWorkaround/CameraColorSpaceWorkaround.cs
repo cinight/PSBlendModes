@@ -182,28 +182,36 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
         UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
         UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
         var universalRenderer = (UniversalRenderer)cameraData.renderer;
-        
-        // Find out the source and destination for the blit operation
-        // In RG these functions will give you A or B according which is the active one automatically
-        m_CameraHandle = UniversalRenderer.GetRGHandle_Current(universalRenderer);
-        m_TargetHandle = UniversalRenderer.GetRGHandle_Next(universalRenderer);
-        TextureHandle currentTextureHandle = renderGraph.ImportTexture(m_CameraHandle);
-        TextureHandle nextTextureHandle = renderGraph.ImportTexture(m_TargetHandle);
-        
-        // Blit from "A" into "B" as we can't Blit from-to the same texture
-        RenderGraphUtils.BlitMaterialParameters para = new(currentTextureHandle, nextTextureHandle, m_Material, 0);
-        renderGraph.AddBlitPass(para, k_CameraColorSpaceWorkaroundName);
 
         if (useSwapBuffer)
         {
+            // Find out the source and destination for the blit operation
+            // In RG these functions will give you A or B according which is the active one automatically
+            m_CameraHandle = UniversalRenderer.GetRGHandle_Current(universalRenderer);
+            m_TargetHandle = UniversalRenderer.GetRGHandle_Next(universalRenderer);
+            TextureHandle currentTextureHandle = renderGraph.ImportTexture(m_CameraHandle);
+            TextureHandle nextTextureHandle = renderGraph.ImportTexture(m_TargetHandle);
+            
+            // Blit from "A" into "B" as we can't Blit from-to the same texture
+            RenderGraphUtils.BlitMaterialParameters para = new(currentTextureHandle, nextTextureHandle, m_Material, 0);
+            renderGraph.AddBlitPass(para, k_CameraColorSpaceWorkaroundName);
+            
             // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
             resourceData.cameraColor = nextTextureHandle;
         }
         else
         {
+            TextureHandle src = resourceData.activeColorTexture;
+            TextureDesc desc = src.GetDescriptor(renderGraph);
+            TextureHandle temp = renderGraph.CreateTexture(desc);
+            
+            // Blit from "A" into "B" as we can't Blit from-to the same texture
+            RenderGraphUtils.BlitMaterialParameters para = new(src, temp, m_Material, 0);
+            renderGraph.AddBlitPass(para, k_CameraColorSpaceWorkaroundName);
+            
             // Blit from "B" back to "A"
             if (m_DefaultBlitMaterial == null) m_DefaultBlitMaterial = Blitter.GetBlitMaterial(TextureDimension.Tex2D);
-            RenderGraphUtils.BlitMaterialParameters para2 = new(nextTextureHandle, currentTextureHandle, m_DefaultBlitMaterial, 0);
+            RenderGraphUtils.BlitMaterialParameters para2 = new(temp, src, m_DefaultBlitMaterial, 0);
             renderGraph.AddBlitPass(para2, k_CameraColorSpaceWorkaroundName);
         }
     }
