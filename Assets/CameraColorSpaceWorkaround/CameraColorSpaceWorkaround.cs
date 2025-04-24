@@ -21,6 +21,10 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
     public Camera camera3D;
     public RenderPassEvent blendEvent = RenderPassEvent.AfterRenderingPostProcessing;
     
+    [Tooltip("If the screen flickers for some reason, try to disable this checkbox to see if it stops the flickering. \n" +
+             "When useSwapBuffer is enabled, it will reuse the second screen buffer that the render pipeline uses so that this CameraColorSpaceWorkaround only does 1 blit operation instead of 2, which is faster.")]
+    public bool useSwapBuffer = true;
+    
     private RenderTexture m_CameraUIRT;
     private const string k_CameraUIRTName = "_CameraUIRT";
     private UniversalAdditionalCameraData m_CameraUIAddData;
@@ -119,6 +123,7 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         {
             // Enqueue pass for the 3D camera
             m_Pass.renderPassEvent = blendEvent;
+            m_Pass.useSwapBuffer = useSwapBuffer;
             cam.GetUniversalAdditionalCameraData().scriptableRenderer.EnqueuePass(m_Pass);
         }
     }
@@ -163,6 +168,7 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
     private RTHandle m_CameraHandle; //BufferA
     private RTHandle m_TargetHandle; //BufferB
     private Material m_Material;
+    internal bool useSwapBuffer = true;
 
     public CameraColorSpaceWorkaroundPass(Material mat)
     {
@@ -218,9 +224,20 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
         {
             Blitter.BlitCameraTexture(cmd, m_CameraHandle, m_TargetHandle, m_Material, 0);
         }
-        
-        // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
-        universalRenderer.SwapColorBuffer(cmd);
+
+        if (useSwapBuffer)
+        {
+            // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
+            universalRenderer.SwapColorBuffer(cmd);
+        }
+        else
+        {
+            // Blit from "B" back to "A"
+            using (new ProfilingScope(cmd, m_ProfilingSampler))
+            {
+                Blitter.BlitCameraTexture(cmd, m_TargetHandle, m_CameraHandle);
+            }
+        }
         
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();
