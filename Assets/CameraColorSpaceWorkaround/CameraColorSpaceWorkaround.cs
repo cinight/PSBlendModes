@@ -170,44 +170,56 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
     public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
     {
         CommandBuffer cmd = CommandBufferPool.Get();
-        
-        // Find out the source and destination for the blit operation
-        var universalRenderer = (UniversalRenderer)renderingData.cameraData.renderer;
-        var currentTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
-        var bufferA = universalRenderer.m_ColorBufferSystem.GetBufferA(); //BufferA
-        var bufferB = universalRenderer.m_ColorBufferSystem.GetFrontBuffer(cmd); //BufferB
-        if (currentTarget == bufferA)
-        {
-            m_CameraHandle = bufferA;
-            m_TargetHandle = bufferB;
-        }
-        else
-        {
-            // When post-processing is enabled on 3D camera, post-processing is rendered into buffer B
-            m_CameraHandle = currentTarget; // Can't be B as target is neither B nor A for some reason
-            m_TargetHandle = bufferA;
-        }
-        
-        // Blit from "A" into "B" as we can't Blit from-to the same texture
-        using (new ProfilingScope(cmd, m_ProfilingSampler))
-        {
-            Blitter.BlitCameraTexture(cmd, m_CameraHandle, m_TargetHandle, m_Material, 0);
-        }
 
         if (useSwapBuffer)
         {
+            // Find out the source and destination for the blit operation
+            var universalRenderer = (UniversalRenderer)renderingData.cameraData.renderer;
+            var currentTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
+            var bufferA = universalRenderer.m_ColorBufferSystem.GetBufferA(); //BufferA
+            var bufferB = universalRenderer.m_ColorBufferSystem.GetFrontBuffer(cmd); //BufferB
+            if (currentTarget == bufferA)
+            {
+                m_CameraHandle = bufferA;
+                m_TargetHandle = bufferB;
+            }
+            else
+            {
+                // When post-processing is enabled on 3D camera, post-processing is rendered into buffer B
+                m_CameraHandle = currentTarget; // Can't be B as target is neither B nor A for some reason
+                m_TargetHandle = bufferA;
+            }
+            
+            // Blit from "A" into "B" as we can't Blit from-to the same texture
+            using (new ProfilingScope(cmd, m_ProfilingSampler))
+            {
+                Blitter.BlitCameraTexture(cmd, m_CameraHandle, m_TargetHandle, m_Material, 0);
+            }
+            
             // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
             universalRenderer.SwapColorBuffer(cmd);
         }
         else
         {
-            // Blit from "B" back to "A"
+            // Set the source texture
+            var currentTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
+            
+            // Create a temp texture as destination
+            var desc = renderingData.cameraData.cameraTargetDescriptor;
+            desc.depthBufferBits = 0;
+            desc.msaaSamples = 1;
+            RenderingUtils.ReAllocateIfNeeded(ref m_CameraHandle, desc, FilterMode.Bilinear, TextureWrapMode.Clamp );
+            
             using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
-                Blitter.BlitCameraTexture(cmd, m_TargetHandle, m_CameraHandle);
+                // Blit from "A" into "B" as we can't Blit from-to the same texture
+                Blitter.BlitCameraTexture(cmd, currentTarget, m_CameraHandle, m_Material, 0);
+                
+                // Blit from "B" back to "A"
+                Blitter.BlitCameraTexture(cmd, m_CameraHandle, currentTarget);
             }
         }
-        
+
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         CommandBufferPool.Release(cmd);
