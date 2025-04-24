@@ -169,6 +169,7 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
     private RTHandle m_TargetHandle; //BufferB
     private Material m_Material;
     internal bool useSwapBuffer = true;
+    private Material m_DefaultBlitMaterial;
 
     public CameraColorSpaceWorkaroundPass(Material mat)
     {
@@ -192,9 +193,19 @@ public class CameraColorSpaceWorkaroundPass : ScriptableRenderPass
         // Blit from "A" into "B" as we can't Blit from-to the same texture
         RenderGraphUtils.BlitMaterialParameters para = new(currentTextureHandle, nextTextureHandle, m_Material, 0);
         renderGraph.AddBlitPass(para, k_CameraColorSpaceWorkaroundName);
-        
-        // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
-        resourceData.cameraColor = nextTextureHandle;
+
+        if (useSwapBuffer)
+        {
+            // Use "B" as the camera target so that we don't need another blit from "B" back to "A"
+            resourceData.cameraColor = nextTextureHandle;
+        }
+        else
+        {
+            // Blit from "B" back to "A"
+            if (m_DefaultBlitMaterial == null) m_DefaultBlitMaterial = Blitter.GetBlitMaterial(TextureDimension.Tex2D);
+            RenderGraphUtils.BlitMaterialParameters para2 = new(nextTextureHandle, currentTextureHandle, m_DefaultBlitMaterial, 0);
+            renderGraph.AddBlitPass(para2, k_CameraColorSpaceWorkaroundName);
+        }
     }
     
     // Non-RenderGraph path
