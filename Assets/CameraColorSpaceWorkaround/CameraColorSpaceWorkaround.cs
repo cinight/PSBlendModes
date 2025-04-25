@@ -28,6 +28,7 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
     private RenderTexture m_CameraUIRT;
     private const string k_CameraUIRTName = "_CameraUIRT";
     private UniversalAdditionalCameraData m_CameraUIAddData;
+    private UniversalAdditionalCameraData m_Camera3DAddData;
     private CameraColorSpaceWorkaroundPass m_Pass;
     private const string k_EnabledName = "_CameraColorSpaceWorkaroundEnabled";
     
@@ -58,6 +59,11 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
         cameraUI.clearFlags = CameraClearFlags.SolidColor;
         cameraUI.backgroundColor = new Color(0,0,0,0);
         m_CameraUIAddData.renderType = CameraRenderType.Base; //So that we can set target texture
+        
+        // Remove cameraUI from stack
+        if(m_Camera3DAddData == null) m_Camera3DAddData = camera3D.GetUniversalAdditionalCameraData();
+        if(m_Camera3DAddData.cameraStack.Contains(cameraUI)) m_Camera3DAddData.cameraStack.Remove(cameraUI);
+        m_Camera3DAddData.UpdateCameraStack();
         
         // Create a RenderTexture and use it as UI camera's target
         if (m_CameraUIRT == null || !m_CameraUIRT.IsCreated())
@@ -114,6 +120,14 @@ public class CameraColorSpaceWorkaround : MonoBehaviour
             if(m_CameraUIAddData == null) m_CameraUIAddData = cameraUI.GetUniversalAdditionalCameraData();
             cameraUI.depth = camera3D.depth + 1;
             m_CameraUIAddData.renderType = CameraRenderType.Overlay;
+            
+            // Add cameraUI back to stack
+            if (camera3D != null)
+            {
+                if(m_Camera3DAddData == null) m_Camera3DAddData = camera3D.GetUniversalAdditionalCameraData();
+                if(!m_Camera3DAddData.cameraStack.Contains(cameraUI)) m_Camera3DAddData.cameraStack.Add(cameraUI);
+                m_Camera3DAddData.UpdateCameraStack();
+            }
         }
     }
     
